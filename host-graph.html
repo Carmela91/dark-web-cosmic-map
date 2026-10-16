@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Host projection — Cosmic Web</title>
+  <style>
+    html,body{margin:0;height:100%;background:#050018;color:#e9e7ff;font:13px/1.45 system-ui,sans-serif;overflow:hidden}
+    #bar{
+      position:fixed;top:0;left:0;right:0;z-index:8;height:56px;
+      display:flex;align-items:center;gap:20px;padding:0 20px;
+      background:linear-gradient(180deg,rgba(8,4,24,.96),rgba(8,4,24,.8));
+      border-bottom:1px solid rgba(167,139,250,.28);
+    }
+    #bar a{color:#a5f3fc;font-size:20px;font-weight:800;letter-spacing:.08em;text-decoration:none}
+    #bar .sub{opacity:.65;font-size:13px}
+    #wrap{display:flex;height:100%;padding-top:56px;box-sizing:border-box}
+    #left,#right{flex:1;position:relative;min-width:0}
+    #left{border-right:1px solid rgba(167,139,250,.18)}
+    canvas{display:block;width:100%;height:100%}
+    .tag{position:absolute;left:18px;top:16px;z-index:2;pointer-events:none;
+      font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c4b5fd}
+    .tag b{display:block;font-size:15px;letter-spacing:.04em;color:#fff;margin-top:4px;text-transform:none}
+    #legend{position:fixed;bottom:16px;left:16px;z-index:8;
+      background:rgba(8,4,24,.82);border:1px solid rgba(167,139,250,.3);
+      border-radius:10px;padding:10px 12px;font-size:12px}
+    .sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+    #panel{position:fixed;bottom:16px;right:16px;width:min(380px,92vw);z-index:8;
+      background:rgba(8,4,24,.92);border:1px solid rgba(167,139,250,.35);
+      border-radius:12px;padding:14px 16px;display:none}
+    .n{font-size:28px;margin:6px 0;font-variant-numeric:tabular-nums;color:#a5f3fc}
+  </style>
+</head>
+<body>
+<div id="bar">
+  <a href="index.html">← Cosmic Map</a>
+  <span class="sub">Host projection · 94 worlds · 19 observed links · not communities</span>
+</div>
+<div id="wrap">
+  <div id="left"><div class="tag" id="tL">Relational<b>—</b></div><canvas id="c1"></canvas></div>
+  <div id="right"><div class="tag" id="tR">Isolated<b>—</b></div><canvas id="c2"></canvas></div>
+</div>
+<div id="legend">
+  <div><span class="sw" style="background:#a5f3fc"></span>LCC silo (ice)</div>
+  <div><span class="sw" style="background:#f472b6"></span>large-site</div>
+  <div><span class="sw" style="background:#22d3ee"></span>medium-site</div>
+  <div><span class="sw" style="background:#a78bfa"></span>small relational</div>
+  <div><span class="sw" style="background:#818cf8"></span>isolate</div>
+  <div><span class="sw" style="background:#e879f9"></span>directory hub</div>
+  <div><span class="sw" style="background:#fb7185"></span>clearnet leak</div>
+</div>
+<div id="panel">
+  <div id="p-role"></div>
+  <div class="n" id="p-n"></div>
+  <div id="p-sum"></div>
+</div>
+<script>
+const COL = {
+  "lcc-silo":"#a5f3fc","large-site":"#f472b6","medium-site":"#22d3ee",
+  "small-or-isolate":"#818cf8","small-site":"#a78bfa",
+  "directory-hub":"#e879f9","clearnet-leak":"#fb7185","unknown":"#818cf8"
+};
+const asArray = x => Array.isArray(x) ? x : (x && typeof x === "object" ? Object.values(x) : []);
+
+function truthyFlag(v){
+  return v === true || v === 1 || v === "1" || v === "true" || v === "True" || v === "yes";
+}
+function isIsolateHost(h){
+  return truthyFlag(h.isolated) || truthyFlag(h.is_isolate)
+    || h.role === "lcc-silo" || h.role === "small-or-isolate"
+    || (Number(h.n_urls||0) > 80000);
+}
+function isCore(h){ return h.role === "lcc-silo" || Number(h.n_urls||0) > 80000; }
+function radius(n){ return 7 + Math.log1p(n||1)*2.2; }
+
+function show(h, iso){
+  document.getElementById("panel").style.display = "block";
+  document.getElementById("p-role").textContent = (h.role||"host")+" · "+(h.id||"");
+  document.getElementById("p-n").textContent = (h.n_urls||0).toLocaleString("en-US")+" URLs";
+  document.getElementById("p-sum").textContent = iso
+    ? "No inter-host hyperlink in the canonical graph."
+    : "On the 19-edge host projection. Hyperlink ≠ ownership.";
+}
+
+function placeRing(list, cx, cy, R, phase){
+  const n = list.length;
+  if(!n) return;
+  list.forEach((nd,i)=>{
+    const a = phase + (i / n) * Math.PI * 2;
+    nd.x = cx + Math.cos(a) * R;
+    nd.y = cy + Math.sin(a) * R;
+    nd.r = radius(nd.n_urls);
+  });
+}
+
+function layoutRel(nodes, W, H){
+  const cx = W*0.5, cy = H*0.54, S = Math.min(W,H);
+  const hub  = nodes.filter(n => n.role === "directory-hub");
+  const med  = nodes.filter(n => n.role === "medium-site");
+  const leak = nodes.filter(n => n.role === "clearnet-leak");
+  const rest = nodes.filter(n => !["directory-hub","medium-site","clearnet-leak"].includes(n.role));
+  hub.forEach(n => { n.x = cx; n.y = cy; n.r = radius(n.n_urls) + 6; });
+  placeRing(med,  cx, cy, S*0.20, -0.3);
+  placeRing(rest, cx, cy, S*0.32,  0.15);
+  placeRing(leak, cx, cy, S*0.41,  1.0);
+  if(!hub.length && !med.length && rest.length){
+    placeRing(nodes, cx, cy, S*0.30, 0);
+  }
+}
+
+function layoutIso(nodes, W, H){
+  const cx = W*0.5, cy = H*0.54, S = Math.min(W,H);
+  const silo  = nodes.find(isCore);
+  const large = nodes.filter(n => n !== silo && n.role === "large-site");
+  const rest  = nodes.filter(n => n !== silo && n.role !== "large-site");
+  if(silo){ silo.x = cx; silo.y = cy; silo.r = Math.min(48, radius(silo.n_urls)+6); }
+  placeRing(large, cx, cy, S*0.24, 0.1);
+  const mid = Math.ceil(rest.length/2);
+  placeRing(rest.slice(0,mid), cx, cy, S*0.34, 0.35);
+  placeRing(rest.slice(mid),   cx, cy, S*0.43, 0.85);
+}
+
+function paint(canvas, nodes, edges, isoPane){
+  const ctx = canvas.getContext("2d");
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  let W, H, hover = null;
+
+  function resize(){
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(isoPane) layoutIso(nodes,W,H); else layoutRel(nodes,W,H);
+  }
+  resize();
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const cx=W*0.5, cy=H*0.54, S=Math.min(W,H);
+    ctx.strokeStyle="rgba(167,139,250,.14)";
+    ctx.lineWidth=1;
+    [0.20,0.32,0.43].forEach(f=>{
+      ctx.beginPath(); ctx.arc(cx,cy,S*f,0,Math.PI*2); ctx.stroke();
+    });
+
+    if(!isoPane && edges && edges.length){
+      const map = Object.fromEntries(nodes.map(n=>[n.id,n]));
+      ctx.lineWidth=1.5;
+      ctx.strokeStyle="rgba(196,181,253,.6)";
+      edges.forEach(e=>{
+        const a=map[e.source], b=map[e.target];
+        if(!a||!b) return;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      });
+    }
+
+    if(!nodes.length){
+      ctx.fillStyle="rgba(233,231,255,.45)";
+      ctx.font="14px system-ui";
+      ctx.textAlign="center";
+      ctx.fillText("No hosts in this panel — check isolated flag", W/2, H/2);
+      return;
+    }
+
+    nodes.forEach(n=>{
+      if(!Number.isFinite(n.x)) return;
+      const c = COL[n.role] || "#818cf8";
+      const on = n === hover;
+      ctx.globalAlpha = on ? 1 : 0.93;
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha = on ? 0.4 : 0.18;
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r*(on?2.15:1.65),0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+      const lab = isCore(n) || n.role==="directory-hub" || n.role==="medium-site"
+        || n.role==="large-site" || on;
+      if(lab){
+        ctx.fillStyle="#eef2ff";
+        ctx.font="600 11px system-ui";
+        ctx.textAlign="center";
+        ctx.fillText(isCore(n)?"LCC silo":(n.role||""), n.x, n.y+n.r+13);
+        ctx.fillStyle="rgba(238,242,255,.72)";
+        ctx.font="11px system-ui";
+        ctx.fillText((n.n_urls||0).toLocaleString("en-US"), n.x, n.y+n.r+26);
+      }
+    });
+  }
+
+  function pick(x,y){
+    let best=null, d0=1e9;
+    nodes.forEach(n=>{
+      const d=Math.hypot(n.x-x,n.y-y);
+      if(d < n.r+8 && d<d0){ d0=d; best=n; }
+    });
+    return best;
+  }
+  canvas.addEventListener("mousemove", ev=>{
+    const r=canvas.getBoundingClientRect();
+    hover = pick(ev.clientX-r.left, ev.clientY-r.top);
+    canvas.style.cursor = hover ? "pointer" : "default";
+    draw();
+  });
+  canvas.addEventListener("click", ev=>{
+    const r=canvas.getBoundingClientRect();
+    const h=pick(ev.clientX-r.left, ev.clientY-r.top);
+    if(h) show(h, isoPane);
+  });
+  window.addEventListener("resize", ()=>{ resize(); draw(); });
+  draw();
+}
+
+fetch("demo_c.json").then(r=>r.json()).then(d=>{
+  const hosts = asArray(d.hosts);
+  const edges = asArray(d.host_edges);
+  const iso = hosts.filter(isIsolateHost);
+  const rel = hosts.filter(h => !isIsolateHost(h));
+  document.querySelector("#tL b").textContent = rel.length+" hosts · "+edges.length+" filaments";
+  document.querySelector("#tR b").textContent = iso.length+" hosts · no inter-host edge";
+  paint(document.getElementById("c1"), rel, edges, false);
+  paint(document.getElementById("c2"), iso, [], true);
+});
+</script>
+</body>
+</html>

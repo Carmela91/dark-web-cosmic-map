@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dark Web Cosmic Web</title>
+  <style>
+    html,body{margin:0;height:100%;background:#050018;color:#e9e7ff;font:12px/1.4 system-ui,sans-serif;overflow:hidden}
+    #c{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+    .box{position:fixed;z-index:20;background:rgba(8,4,24,.78);border:1px solid rgba(167,139,250,.35);border-radius:10px;padding:10px 12px}
+    #hud{top:10px;left:10px;max-width:300px}
+    #legend{top:10px;right:10px;width:236px}
+    #layers{top:10px;right:258px;width:270px;max-height:calc(100vh - 24px);overflow:auto}
+    #panel{display:none;bottom:10px;right:10px;width:380px;max-height:56vh;overflow:auto}
+    #foot{bottom:10px;left:10px;max-width:58vw}
+    #sndbtn{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:30;
+      background:#6d28d9;color:#fff;border:0;padding:11px 20px;border-radius:999px;font-weight:800;cursor:pointer}
+    #sndbtn.on{background:#0f766e}
+    .sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+    #panel .n{font-size:28px;margin:8px 0;font-variant-numeric:tabular-nums}
+    button.sec{background:#2e1065;color:#ddd6fe;border:1px solid #7c3aed;border-radius:6px;padding:6px 10px;cursor:pointer;margin:6px 6px 0 0}
+    label{display:block;margin:3px 0;cursor:pointer}
+    h1{font-size:12px;margin:0 0 6px;letter-spacing:.12em}
+    small{opacity:.78}
+    #status{margin-top:7px;color:#c4b5fd;font-weight:600}
+    #explain{margin-top:6px;color:#ddd6fe;font-size:11px}
+    hr{border:0;border-top:1px solid #4c1d95;margin:8px 0}
+    #nav{position:fixed;top:14px;left:328px;z-index:25}
+    #nav a{color:#a5f3fc;font-size:20px;font-weight:800;letter-spacing:.08em;text-decoration:none}
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="nav"><a href="host-graph.html">Host graph →</a></div>
+<div class="box" id="hud">
+  <h1>COSMIC WEB</h1>
+  411 284 URL · 94 hosts · LCC 88 729<br>
+  <small>Ice core = Darkfox silo. Slate-violet = isolates.
+  Camera rotates when idle (8s after you stop).</small>
+</div>
+<div class="box" id="layers">
+  <h1>SIGNALS</h1>
+  <label><input type="checkbox" id="l-cloud" checked> URL nebula</label>
+  <label><input type="checkbox" id="l-host" checked> host worlds</label>
+  <label><input type="checkbox" id="l-edge" checked> 19 filaments</label>
+  <label><input type="checkbox" id="l-orbits" checked> scale orbits</label>
+  <hr>
+  <b>Campaign — look at SHAPE</b>
+  <label><input type="radio" name="sig" value="off" checked> none</label>
+  <label><input type="radio" name="sig" value="epoch"> epoch = ICE HALO</label>
+  <label><input type="radio" name="sig" value="flare"> flare = SPARK JET</label>
+  <label><input type="radio" name="sig" value="temporal"> temporal = PULSE WAVE</label>
+  <label><input type="radio" name="sig" value="anomaly"> anomaly = SPLIT</label>
+  <hr>
+  <b>Threat-intel</b>
+  <label><input type="radio" name="sig" value="degree"> degree heat</label>
+  <label><input type="radio" name="sig" value="coverage"> FAST coverage</label>
+  <label><input type="radio" name="sig" value="bridges"> bridges (25)</label>
+  <label><input type="radio" name="sig" value="silo"> silo vs directory</label>
+  <label><input type="radio" name="sig" value="leaks"> clearnet leaks</label>
+  <label><input type="radio" name="sig" value="multi"> multiseed</label>
+  <input id="ts" type="range" min="0" max="1000" value="500" style="width:100%;margin-top:8px">
+  <div id="tlab"><small>—</small></div>
+  <div id="status"></div>
+  <div id="explain"></div>
+</div>
+<div class="box" id="legend">
+  <h1>LEGEND</h1>
+  <div><span class="sw" style="background:#a5f3fc"></span>LCC silo / ice core</div>
+  <div><span class="sw" style="background:#f472b6"></span>large-site</div>
+  <div><span class="sw" style="background:#22d3ee"></span>medium-site</div>
+  <div><span class="sw" style="background:#a78bfa"></span>small relational</div>
+  <div><span class="sw" style="background:#818cf8"></span>isolate — no inter-host link</div>
+  <div><span class="sw" style="background:#e879f9"></span>directory hub</div>
+  <div><span class="sw" style="background:#fb7185"></span>clearnet leak</div>
+  <div><span class="sw" style="background:#c4b5fd"></span>filament (19 edges)</div>
+  <small>Slate-violet = 69 isolates (sparsity), not “unknown”.</small>
+</div>
+<div class="box" id="panel">
+  <div id="p-role"></div>
+  <div class="n" id="p-n"></div>
+  <div id="p-sum"></div>
+  <pre id="p-full" style="display:none;white-space:pre-wrap;font-size:11px"></pre>
+  <button class="sec" id="p-more">Full record</button>
+  <button class="sec" id="p-close">Close</button>
+</div>
+<div class="box" id="foot">Loading…</div>
+<button id="sndbtn">ENABLE AMBIENT</button>
+<audio id="aud-amb" loop preload="auto" src="ambient.mp3"></audio>
+<audio id="aud-chime" preload="auto" src="chime.mp3"></audio>
+<audio id="aud-whoosh" preload="auto" src="whoosh.mp3"></audio>
+<audio id="aud-tick" preload="auto" src="tick.mp3"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const ICE = 0xa5f3fc;
+const ROLECOL = {
+  "lcc-silo": ICE,
+  "large-site": 0xf472b6,
+  "medium-site": 0x22d3ee,
+  "small-or-isolate": 0x818cf8,
+  "small-site": 0xa78bfa,
+  "directory-hub": 0xe879f9,
+  "clearnet-leak": 0xfb7185,
+  "unknown": 0x818cf8
+};
+function isCore(h){ return h && (h.role==="lcc-silo" || (h.n_urls||0)>50000); }
+function asArray(x){ if(Array.isArray(x)) return x; if(x&&typeof x==="object") return Object.values(x); return []; }
+function glowTex(a,b){
+  const s=128,cv=document.createElement("canvas"); cv.width=cv.height=s;
+  const g=cv.getContext("2d"), grd=g.createRadialGradient(64,64,0,64,64,64);
+  grd.addColorStop(0,a||"rgba(200,240,255,1)");
+  grd.addColorStop(0.25,b||"rgba(120,200,255,.5)");
+  grd.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=grd; g.fillRect(0,0,s,s);
+  const t=new THREE.CanvasTexture(cv); t.needsUpdate=true; return t;
+}
+function rHost(n){ return 12+Math.log1p(n||1)*7.6; }
+function fmtTime(t){
+  if(!Number.isFinite(t)) return "—";
+  let ms=t;
+  if(t>1e9&&t<1e11) ms=t*1000; else if(t>1e14) ms=t/1e3; else if(t<=1e9) return String(Math.round(t));
+  const d=new Date(ms); if(isNaN(d)) return String(t);
+  const p=n=>String(n).padStart(2,"0");
+  return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "+p(d.getUTCHours())+":"+p(d.getUTCMinutes())+" UTC";
+}
+function winStart(w){ if(!w||typeof w!=="object") return NaN; return Number(w.start??w.t0??w.begin); }
+function winEnd(w){ if(!w||typeof w!=="object") return NaN; return Number(w.end??w.t1??w.stop??winStart(w)); }
+function collectTimeRange(layers){
+  let lo=Infinity,hi=-Infinity;
+  for(const recs of Object.values(layers||{})){
+    for(const r of asArray(recs)){
+      for(const w of asArray(r&&r.windows)){
+        const a=winStart(w),b=winEnd(w);
+        if(Number.isFinite(a)) lo=Math.min(lo,a);
+        if(Number.isFinite(b)) hi=Math.max(hi,b);
+      }
+    }
+  }
+  if(!Number.isFinite(lo)||lo===hi) return {lo:0,hi:1};
+  return {lo,hi};
+}
+function activeSeedsAt(layers,name,t){
+  const seeds=new Set(); let n=0;
+  for(const r of asArray((layers||{})[name])){
+    if(!r) continue;
+    const hit=asArray(r.windows).some(w=>{
+      const a=winStart(w),b=winEnd(w);
+      return Number.isFinite(a)&&Number.isFinite(b)&&t>=Math.min(a,b)&&t<=Math.max(a,b);
+    });
+    if(hit&&r.seed!=null){ seeds.add(String(r.seed)); n++; }
+  }
+  return {seeds,n};
+}
+function orbitLine(radius,tilt,color,op){
+  const pts=[],N=256;
+  for(let i=0;i<=N;i++){
+    const a=i/N*Math.PI*2;
+    pts.push(Math.cos(a)*radius, Math.sin(a)*radius*Math.sin(tilt)*0.18, Math.sin(a)*radius*Math.cos(tilt));
+  }
+  return new THREE.Line(
+    new THREE.BufferGeometry().setAttribute("position",new THREE.Float32BufferAttribute(pts,3)),
+    new THREE.LineBasicMaterial({color,transparent:true,opacity:op||0.32})
+  );
+}
+function play(id){
+  const el=document.getElementById(id);
+  if(!el||!el.getAttribute("src")) return;
+  el.currentTime=0;
+  const p=el.play(); if(p&&p.catch) p.catch(()=>{});
+}
+
+const EXPLAIN={
+  off:"Ice core + slate-violet isolates. Orbit = log(pages). Idle camera rotates.",
+  epoch:"CYAN RING on hosts whose crawl window covers t.",
+  flare:"MAGENTA JET = scraper burst window at t.",
+  temporal:"WAVE RINGS = silence / period profile at t.",
+  anomaly:"SPLIT GHOST = derived epoch+flare flag.",
+  degree:"Heat = mean URL degree.",
+  coverage:"Heat = FAST window count.",
+  bridges:"Only 25 relational hosts.",
+  silo:"Ice = LCC silo. Violet = directory hub.",
+  leaks:"Clearnet-leak hosts only.",
+  multi:"Heat = n_seeds."
+};
+
+async function init(){
+  const canvas=document.getElementById("c");
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setClearColor(0x050018,1);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(54,innerWidth/innerHeight,1,250000);
+  const controls=new THREE.OrbitControls(camera,canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
+  controls.rotateSpeed = 0.95;
+  controls.zoomSpeed = 1.25;
+  controls.panSpeed = 0.85;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 1.35;
+  controls.minDistance = 220;
+  controls.maxDistance = 18000;
+
+  let idleT=null;
+  function bumpIdle(){
+    controls.autoRotate=false;
+    clearTimeout(idleT);
+    idleT=setTimeout(()=>{ controls.autoRotate=true; }, 8000);
+  }
+  canvas.addEventListener("pointerdown", bumpIdle);
+  canvas.addEventListener("wheel", bumpIdle, {passive:true});
+
+  const TEX=glowTex();
+  const TEXW=glowTex("rgba(255,255,255,1)","rgba(160,210,255,.5)");
+
+  const nF=60000,fpos=new Float32Array(nF*3),fcol=new Float32Array(nF*3);
+  for(let i=0;i<nF;i++){
+    const R=6000+Math.pow(Math.random(),0.5)*85000;
+    const th=Math.random()*6.283, ph=Math.acos(2*Math.random()-1);
+    fpos[i*3]=R*Math.sin(ph)*Math.cos(th);
+    fpos[i*3+1]=R*Math.cos(ph)*0.4;
+    fpos[i*3+2]=R*Math.sin(ph)*Math.sin(th);
+    const hue=Math.random()<0.55?0.55+Math.random()*0.1:0.72+Math.random()*0.08;
+    const c=new THREE.Color().setHSL(hue,0.75,0.48+Math.random()*0.38);
+    fcol[i*3]=c.r; fcol[i*3+1]=c.g; fcol[i*3+2]=c.b;
+  }
+  scene.add(new THREE.Points(
+    new THREE.BufferGeometry().setAttribute("position",new THREE.BufferAttribute(fpos,3)).setAttribute("color",new THREE.BufferAttribute(fcol,3)),
+    new THREE.PointsMaterial({size:4.6,map:TEXW,vertexColors:true,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true})
+  ));
+
+  const res=await fetch("demo_c.json");
+  if(!res.ok) throw new Error("demo_c.json HTTP "+res.status);
+  const data=await res.json();
+  const lod=asArray(data.url_lod||data.nodes);
+  const hosts=asArray(data.hosts);
+  const edges=asArray(data.host_edges);
+  const layers=data.layers&&typeof data.layers==="object"?data.layers:{};
+
+  const maxL=Math.max(...hosts.map(h=>Math.log1p(h.n_urls||0)),1);
+  const TILT=0.5;
+  hosts.forEach((h,i)=>{
+    const n=h.n_urls||0;
+    h._rel=((h.inter_in||0)+(h.inter_out||0))>0 && !h.isolated;
+    if(isCore(h)){ h.x=h.y=h.z=0; return; }
+    const t=1-(Math.log1p(n)/maxL);
+    const orbit=420+t*1720, a=(i*2.39996)%(Math.PI*2);
+    h.x=Math.cos(a)*orbit; h.z=Math.sin(a)*orbit*Math.cos(TILT);
+    h.y=Math.sin(a)*orbit*Math.sin(TILT)*0.36+(h.isolated?48:0);
+  });
+
+  const orbits=new THREE.Group();
+  [420,760,1100,1460,1820,2180].forEach((R,i)=>orbits.add(orbitLine(R,TILT, i<2?0x22d3ee:0xa78bfa, i<2?0.4:0.22)));
+  scene.add(orbits);
+
+  const n=lod.length, pos=new Float32Array(n*3), col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const nd=lod[i]||{};
+    const u=Number(nd.x)||0,v=Number(nd.z_display||nd.z)||0,w=Number(nd.y)||0;
+    const rr=Math.hypot(u,v,w), ang=Math.atan2(v,u)+w*0.4;
+    const rad=(nd.in_lcc?220:580)+rr*1000;
+    pos[i*3]=Math.cos(ang)*rad;
+    pos[i*3+2]=Math.sin(ang)*rad*Math.cos(TILT);
+    pos[i*3+1]=Math.sin(ang)*rad*Math.sin(TILT)*0.28+(nd.in_lcc?-20:60);
+    const c=new THREE.Color();
+    if(nd.in_lcc) c.setHSL(0.55,0.9,0.68);
+    else c.setHSL(0.74,0.8,0.5);
+    col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+  }
+  const cloud=new THREE.Points(
+    new THREE.BufferGeometry().setAttribute("position",new THREE.BufferAttribute(pos,3)).setAttribute("color",new THREE.BufferAttribute(col,3)),
+    new THREE.PointsMaterial({size:8.8,map:TEX,vertexColors:true,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true})
+  );
+  scene.add(cloud);
+
+  const hostG=new THREE.Group(); scene.add(hostG);
+  const pick=[], byId={};
+  hosts.forEach(h=>{
+    const r=rHost(h.n_urls);
+    const color = isCore(h) ? ICE : (ROLECOL[h.role]||0x818cf8);
+    const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.96});
+    const mesh=new THREE.Mesh(new THREE.SphereGeometry(Math.max(r,10),28,20),mat);
+    mesh.position.set(h.x,h.y,h.z);
+    mesh.userData={host:h,baseColor:color,mat,active:false,sig:"off"};
+
+    const halo=new THREE.Points(
+      new THREE.BufferGeometry().setAttribute("position",new THREE.Float32BufferAttribute([0,0,0],3)),
+      new THREE.PointsMaterial({size:r*16,map:TEX,color,transparent:true,opacity:.75,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true})
+    );
+    mesh.userData.halo=halo; mesh.add(halo);
+
+    const icePts=[];
+    for(let i=0;i<=80;i++){ const a=i/80*Math.PI*2; icePts.push(Math.cos(a)*r*2.4,0,Math.sin(a)*r*2.4); }
+    const ice=new THREE.Line(
+      new THREE.BufferGeometry().setAttribute("position",new THREE.Float32BufferAttribute(icePts,3)),
+      new THREE.LineBasicMaterial({color:0x22d3ee,transparent:true,opacity:0})
+    );
+    mesh.userData.ice=ice; mesh.add(ice);
+
+    const ns=90, sp=new Float32Array(ns*3);
+    for(let k=0;k<ns;k++){
+      const z=Math.random()*r*5;
+      sp[k*3]=(Math.random()-.5)*r*0.4; sp[k*3+1]=z; sp[k*3+2]=(Math.random()-.5)*r*0.4;
+    }
+    const jet=new THREE.Points(
+      new THREE.BufferGeometry().setAttribute("position",new THREE.BufferAttribute(sp,3)),
+      new THREE.PointsMaterial({size:6,map:TEX,color:0xe879f9,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true})
+    );
+    mesh.userData.jet=jet; mesh.add(jet);
+
+    const w1=ice.clone(); w1.material=new THREE.LineBasicMaterial({color:0x67e8f9,transparent:true,opacity:0});
+    const w2=ice.clone(); w2.material=new THREE.LineBasicMaterial({color:0xa5f3fc,transparent:true,opacity:0});
+    mesh.userData.w1=w1; mesh.userData.w2=w2; mesh.add(w1,w2);
+
+    const ghost=new THREE.Mesh(
+      new THREE.SphereGeometry(Math.max(r,10),16,12),
+      new THREE.MeshBasicMaterial({color:0xf0abfc,transparent:true,opacity:0,wireframe:true})
+    );
+    mesh.userData.ghost=ghost; mesh.add(ghost);
+
+    if(isCore(h)){
+      const ng=16000,gp=new Float32Array(ng*3),gc=new Float32Array(ng*3);
+      for(let k=0;k<ng;k++){
+        const a=Math.random()*6.283, rr=Math.pow(Math.random(),.3)*300;
+        gp[k*3]=Math.cos(a)*rr; gp[k*3+1]=(Math.random()-.5)*100; gp[k*3+2]=Math.sin(a)*rr*0.9;
+        const c=new THREE.Color().setHSL(0.55,0.85,0.62+Math.random()*0.25);
+        gc[k*3]=c.r; gc[k*3+1]=c.g; gc[k*3+2]=c.b;
+      }
+      mesh.add(new THREE.Points(
+        new THREE.BufferGeometry().setAttribute("position",new THREE.BufferAttribute(gp,3)).setAttribute("color",new THREE.BufferAttribute(gc,3)),
+        new THREE.PointsMaterial({size:11,map:TEX,vertexColors:true,transparent:true,opacity:.72,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true})
+      ));
+    }
+    hostG.add(mesh); pick.push(mesh); if(h.id) byId[h.id]=mesh;
+  });
+
+  const epos=[];
+  edges.forEach(e=>{
+    const a=byId[e.source], b=byId[e.target];
+    if(!a||!b) return;
+    epos.push(a.position.x,a.position.y,a.position.z, b.position.x,b.position.y,b.position.z);
+  });
+  const edgeA=new THREE.LineSegments(
+    new THREE.BufferGeometry().setAttribute("position",new THREE.Float32BufferAttribute(epos.length?epos:[0,0,0,1,0,0],3)),
+    new THREE.LineBasicMaterial({color:0xc4b5fd,transparent:true,opacity:.9})
+  );
+  scene.add(edgeA);
+
+  camera.position.set(60,1000,2200);
+  controls.target.set(0,0,0);
+
+  document.getElementById("l-cloud").onchange=e=>cloud.visible=e.target.checked;
+  document.getElementById("l-host").onchange=e=>hostG.visible=e.target.checked;
+  document.getElementById("l-edge").onchange=e=>edgeA.visible=e.target.checked;
+  document.getElementById("l-orbits").onchange=e=>orbits.visible=e.target.checked;
+
+  const {lo,hi}=collectTimeRange(layers);
+  const slider=document.getElementById("ts");
+  const tNow=()=>lo+(hi-lo)*(Number(slider.value)/1000);
+  const currentSig=()=>(document.querySelector('input[name="sig"]:checked')||{}).value||"off";
+
+  function coverage(h){
+    const sset=new Set(asArray(h.seeds).map(String));
+    let n=0;
+    for(const recs of Object.values(layers)){
+      n+=asArray(recs).filter(r=>r&&sset.has(String(r.seed))).reduce((a,r)=>a+asArray(r.windows).length,0);
+    }
+    return n;
+  }
+  const covMax=Math.max(1,...hosts.map(coverage));
+  const degMax=Math.max(1,...hosts.map(h=>Number(h.degree_mean_url||0)));
+  const seedMax=Math.max(1,...hosts.map(h=>Number(h.n_seeds||(h.seeds||[]).length||0)));
+
+  function clearFX(mesh){
+    if(mesh.userData.ice) mesh.userData.ice.material.opacity=0;
+    if(mesh.userData.jet) mesh.userData.jet.material.opacity=0;
+    if(mesh.userData.w1) mesh.userData.w1.material.opacity=0;
+    if(mesh.userData.w2) mesh.userData.w2.material.opacity=0;
+    if(mesh.userData.ghost) mesh.userData.ghost.material.opacity=0;
+  }
+
+  function applyLayers(){
+    const t=tNow(), sig=currentSig();
+    const timed=["epoch","flare","temporal","anomaly"].includes(sig);
+    const act=timed?activeSeedsAt(layers,sig,t):{seeds:new Set(),n:0};
+    let nHost=0;
+    pick.forEach(mesh=>{
+      const h=mesh.userData.host||{};
+      const list=asArray(h.seeds).map(String);
+      let active=false, hex=mesh.userData.baseColor, op=0.96;
+      if(sig==="off"){
+        hex = isCore(h) ? ICE : mesh.userData.baseColor;
+      } else if(sig==="degree"){
+        const u=Math.min(1,Number(h.degree_mean_url||0)/degMax);
+        hex=new THREE.Color().setHSL(0.58,0.85,0.28+u*0.5).getHex(); op=0.4+u*0.6;
+      } else if(sig==="coverage"){
+        const u=Math.min(1,coverage(h)/covMax);
+        hex=new THREE.Color().setHSL(0.72,0.75,0.26+u*0.5).getHex(); op=0.35+u*0.65; active=u>0.12;
+      } else if(sig==="bridges"){ active=!!h._rel; hex=active?0x22d3ee:0x111827; op=active?1:0.07; }
+      else if(sig==="silo"){
+        if(isCore(h)){active=true;hex=ICE;op=1;}
+        else if(h.role==="directory-hub"){active=true;hex=0xe879f9;op=1;}
+        else {hex=0x111827;op=0.06;}
+      } else if(sig==="leaks"){ active=h.role==="clearnet-leak"; hex=active?0xfb7185:0x111827; op=active?1:0.06; }
+      else if(sig==="multi"){
+        const u=Math.min(1,Number(h.n_seeds||list.length||0)/seedMax);
+        hex=new THREE.Color().setHSL(0.8,0.7,0.22+u*0.5).getHex(); op=0.3+u*0.7; active=u>0.2;
+      } else if(timed){
+        active=list.some(s=>act.seeds.has(s));
+        hex=active?(sig==="epoch"?0x22d3ee:sig==="flare"?0xe879f9:sig==="temporal"?0x67e8f9:0xf0abfc):0x111827;
+        op=active?1:0.06;
+      }
+      if(active) nHost++;
+      mesh.userData.active=active; mesh.userData.sig=sig;
+      mesh.userData.mat.color.setHex(hex); mesh.userData.mat.opacity=op;
+      if(mesh.userData.halo){ mesh.userData.halo.material.color.setHex(hex); mesh.userData.halo.material.opacity=(active||sig==="off")?0.8:0.08; }
+      clearFX(mesh);
+    });
+    document.getElementById("tlab").innerHTML="<small>"+fmtTime(t)+"<br>"+fmtTime(lo)+" → "+fmtTime(hi)+"</small>";
+    document.getElementById("status").textContent=
+      timed
+        ? (act.n? (sig+" · "+act.n+" windows · "+nHost+" worlds show the shape") : (sig+" · 0 windows at t — move slider"))
+        : (sig+" · worlds "+nHost+"/"+hosts.length);
+    document.getElementById("explain").textContent=EXPLAIN[sig]||"";
+  }
+  document.querySelectorAll('input[name="sig"]').forEach(el=>{
+    el.onchange=()=>{ applyLayers(); play("aud-tick"); if(currentSig()==="flare") play("aud-whoosh"); };
+  });
+  slider.oninput=applyLayers; applyLayers();
+
+  document.getElementById("sndbtn").onclick=async ()=>{
+    const a=document.getElementById("aud-amb");
+    try{
+      a.volume=0.35; await a.play(); play("aud-chime");
+      document.getElementById("sndbtn").textContent="AMBIENT ON";
+      document.getElementById("sndbtn").classList.add("on");
+    }catch(e){
+      document.getElementById("sndbtn").textContent="ADD ambient.mp3";
+    }
+  };
+
+  const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+  let sel=null, openFull=false;
+  function hostLayerHits(h){
+    const sset=new Set(asArray(h.seeds).map(String)), out={};
+    for(const [name,recs] of Object.entries(layers)){
+      out[name]=asArray(recs).filter(r=>r&&sset.has(String(r.seed))).reduce((a,r)=>a+asArray(r.windows).length,0);
+    }
+    return out;
+  }
+  function openHost(h){
+    play("aud-chime");
+    const hits=hostLayerHits(h);
+    document.getElementById("p-role").textContent=(h.role||"host")+" · "+(h.id||"");
+    document.getElementById("p-n").textContent=(h.n_urls||0).toLocaleString("en-US")+" URLs";
+    document.getElementById("p-sum").innerHTML=
+      (h.isolated?"ISOLATE — slate-violet: no inter-host hyperlink.<br>":"RELATIONAL — on the 19-edge graph.<br>")+
+      (isCore(h)?"ICE CORE — LCC silo, no inter-host edges.<br>":"")+
+      "epoch "+(hits.epoch||0)+" · flare "+(hits.flare||0)+" · temporal "+(hits.temporal||0)+" · anomaly "+(hits.anomaly||0)+
+      " · FAST Σ "+coverage(h)+
+      "<br><small>anomaly = epoch+flare fusion.</small>";
+    document.getElementById("p-full").textContent=JSON.stringify({
+      id:h.id,role:h.role,n_urls:h.n_urls,isolated:h.isolated,seeds:h.seeds,layer_windows:hits
+    },null,2);
+    document.getElementById("p-full").style.display="none";
+    openFull=false; document.getElementById("panel").style.display="block";
+  }
+  canvas.addEventListener("click",ev=>{
+    mouse.x=(ev.clientX/innerWidth)*2-1; mouse.y=-(ev.clientY/innerHeight)*2+1;
+    ray.setFromCamera(mouse,camera);
+    const hit=ray.intersectObjects(pick,false)[0];
+    if(!hit) return;
+    sel=hit.object; openHost(sel.userData.host);
+    controls.target.lerp(sel.position,.2);
+  });
+  document.getElementById("p-more").onclick=()=>{
+    openFull=!openFull;
+    document.getElementById("p-full").style.display=openFull?"block":"none";
+  };
+  document.getElementById("p-close").onclick=()=>document.getElementById("panel").style.display="none";
+
+  document.getElementById("foot").textContent=
+    "411,284 URLs · LOD "+n.toLocaleString("en-US")+" · 94 hosts · ice core · isolates = slate-violet";
+
+  window.addEventListener("resize",()=>{
+    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
+
+  (function loop(){
+    requestAnimationFrame(loop);
+    const t=performance.now()*0.001;
+    pick.forEach(mesh=>{
+      const a=mesh.userData.active, sig=mesh.userData.sig;
+      const ice=mesh.userData.ice, jet=mesh.userData.jet, w1=mesh.userData.w1, w2=mesh.userData.w2, ghost=mesh.userData.ghost;
+      mesh.scale.set(1,1,1);
+      if(ice) ice.material.opacity=0;
+      if(jet) jet.material.opacity=0;
+      if(w1) w1.material.opacity=0;
+      if(w2) w2.material.opacity=0;
+      if(ghost){ ghost.material.opacity=0; ghost.position.set(0,0,0); }
+      if(!a) return;
+      if(sig==="epoch"&&ice){
+        const p=0.6+0.4*Math.sin(t*1.2);
+        ice.scale.setScalar(1.1+p*2.2); ice.material.opacity=0.35+p*0.55; ice.rotation.y=t*0.5;
+      } else if(sig==="flare"&&jet){
+        jet.material.opacity=0.45+0.5*Math.abs(Math.sin(t*10));
+        jet.rotation.z=t*4; jet.position.y=20*Math.sin(t*6);
+      } else if(sig==="temporal"){
+        const p=(t*0.7)%1;
+        if(w1){ w1.scale.setScalar(1+p*3); w1.material.opacity=0.55*(1-p); }
+        if(w2){ w2.scale.setScalar(1+((p+0.5)%1)*3); w2.material.opacity=0.4*(1-((p+0.5)%1)); }
+      } else if(sig==="anomaly"&&ghost){
+        const on=((t*6)%1)<0.5;
+        ghost.material.opacity=on?0.85:0.15;
+        ghost.position.set(on?18:-18, on?8:-8, 0);
+      }
+    });
+    controls.update();
+    renderer.render(scene,camera);
+  })();
+}
+init().catch(e=>{ document.getElementById("foot").textContent="Error: "+e.message; });
+</script>
+</body>
+</html>
