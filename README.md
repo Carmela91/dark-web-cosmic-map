@@ -6,7 +6,7 @@ An interactive large-scale visualization of the Dark Web ecosystem based on grap
 
 **Interactive Visualization:**
 
-https://dark-web-csmic-map.netlify.app
+https://dark-web-cosmic-map.netlify.app
 
 ## Overview
 
