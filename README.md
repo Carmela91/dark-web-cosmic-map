@@ -126,7 +126,7 @@ into a single exploratory environment.
 
 ## Author
 
-**Carmela**
+**Carmela Mandato**
 
 Computer Science Engineer
 
