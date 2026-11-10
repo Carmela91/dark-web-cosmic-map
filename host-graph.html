@@ -47,6 +47,9 @@
   <div><span class="sw" style="background:#818cf8"></span>isolate</div>
   <div><span class="sw" style="background:#e879f9"></span>directory hub</div>
   <div><span class="sw" style="background:#fb7185"></span>clearnet leak</div>
+  <div><span class="sw" style="background:#ff2244"></span>C1: shared BTC/mail/TG (7 mirrors)</div>
+  <div><span class="sw" style="background:#ff8800"></span>C2: darknet4k / forums56</div>
+  <div><span class="sw" style="background:#ffdd00"></span>C3: 64hk / tormim / z3q</div>
 </div>
 <div id="panel">
   <div id="p-role"></div>
@@ -162,7 +165,14 @@ function paint(canvas, nodes, edges, isoPane){
 
     nodes.forEach(n=>{
       if(!Number.isFinite(n.x)) return;
-      const c = COL[n.role] || "#818cf8";
+      let c = COL[n.role] || "#818cf8";
+      // Override con cluster se presente
+      if (window.CLUSTER_BY_HOST && window.CLUSTER_BY_HOST[n.id]) {
+        const cl = window.CLUSTER_BY_HOST[n.id];
+        if (cl === "CLUSTER-1") c = "#ff2244";
+        else if (cl === "CLUSTER-2") c = "#ff8800";
+        else if (cl === "CLUSTER-3") c = "#ffdd00";
+      }
       const on = n === hover;
       ctx.globalAlpha = on ? 1 : 0.93;
       ctx.fillStyle = c;
@@ -210,6 +220,15 @@ function paint(canvas, nodes, edges, isoPane){
 fetch("demo_c.json").then(r=>r.json()).then(d=>{
   const hosts = asArray(d.hosts);
   const edges = asArray(d.host_edges);
+
+  // Costruisce la mappa host_id → cluster
+  window.CLUSTER_BY_HOST = {};
+  asArray(d.layers && d.layers.clusters).forEach(rec => {
+    if (rec && rec.host_id && rec.cluster) {
+      window.CLUSTER_BY_HOST[rec.host_id] = rec.cluster;
+    }
+  });
+
   const iso = hosts.filter(isIsolateHost);
   const rel = hosts.filter(h => !isIsolateHost(h));
   document.querySelector("#tL b").textContent = rel.length+" hosts · "+edges.length+" filaments";

@@ -59,6 +59,7 @@
   <label><input type="radio" name="sig" value="silo"> silo vs directory</label>
   <label><input type="radio" name="sig" value="leaks"> clearnet leaks</label>
   <label><input type="radio" name="sig" value="multi"> multiseed</label>
+  <label><input type="radio" name="sig" value="clusters"> clusters (C1/C2/C3)</label>
   <input id="ts" type="range" min="0" max="1000" value="500" style="width:100%;margin-top:8px">
   <div id="tlab"><small>—</small></div>
   <div id="status"></div>
@@ -74,6 +75,9 @@
   <div><span class="sw" style="background:#e879f9"></span>directory hub</div>
   <div><span class="sw" style="background:#fb7185"></span>clearnet leak</div>
   <div><span class="sw" style="background:#c4b5fd"></span>filament (19 edges)</div>
+  <div><span class="sw" style="background:#ff2244"></span>C1: shared BTC/mail/TG (7 mirrors)</div>
+  <div><span class="sw" style="background:#ff8800"></span>C2: darknet4k / forums56</div>
+  <div><span class="sw" style="background:#ffdd00"></span>C3: 64hk / tormim / z3q</div>
   <small>Slate-violet = 69 isolates (sparsity), not “unknown”.</small>
 </div>
 <div class="box" id="panel">
@@ -182,7 +186,8 @@ const EXPLAIN={
   bridges:"Only 25 relational hosts.",
   silo:"Ice = LCC silo. Violet = directory hub.",
   leaks:"Clearnet-leak hosts only.",
-  multi:"Heat = n_seeds."
+  multi:"Heat = n_seeds.",
+  clusters:"C1 = rosso (shared BTC/mail/TG, 7 mirrors). C2 = arancione. C3 = giallo."
 };
 
 async function init(){
@@ -408,6 +413,17 @@ async function init(){
       else if(sig==="multi"){
         const u=Math.min(1,Number(h.n_seeds||list.length||0)/seedMax);
         hex=new THREE.Color().setHSL(0.8,0.7,0.22+u*0.5).getHex(); op=0.3+u*0.7; active=u>0.2;
+      } else if(sig==="clusters"){
+        const rec = asArray(layers.clusters||[]).find(r => r && r.host_id === h.id);
+        if(rec){
+        active = true;
+        if(rec.cluster === "CLUSTER-1") hex = 0xff2244;
+        else if(rec.cluster === "CLUSTER-2") hex = 0xff8800;
+        else if(rec.cluster === "CLUSTER-3") hex = 0xffdd00;
+        op = 1;
+      } else {
+        hex = 0x111827; op = 0.08;
+      }
       } else if(timed){
         active=list.some(s=>act.seeds.has(s));
         hex=active?(sig==="epoch"?0x22d3ee:sig==="flare"?0xe879f9:sig==="temporal"?0x67e8f9:0xf0abfc):0x111827;
