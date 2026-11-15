@@ -47,7 +47,7 @@
   <div><span class="sw" style="background:#818cf8"></span>isolate</div>
   <div><span class="sw" style="background:#e879f9"></span>directory hub</div>
   <div><span class="sw" style="background:#fb7185"></span>clearnet leak</div>
-  <div><span class="sw" style="background:#ff2244"></span>C1: shared BTC/mail(7 hosts)</div>
+  <div><span class="sw" style="background:#ff2244"></span>C1: shared BTC/mail (7 hosts)</div>
   <div><span class="sw" style="background:#ff8800"></span>C2: shared-indicator group</div>
   <div><span class="sw" style="background:#ffdd00"></span>C3: shared-indicator group</div>
 </div>
@@ -69,7 +69,6 @@ function truthyFlag(v){
 }
 function isIsolateHost(h){
   return truthyFlag(h.isolated) || truthyFlag(h.is_isolate)
-    || h.role === "lcc-silo" || h.role === "small-or-isolate"
     || (Number(h.n_urls||0) > 80000);
 }
 function isCore(h){ return h.role === "lcc-silo" || Number(h.n_urls||0) > 80000; }
@@ -101,6 +100,13 @@ function layoutRel(nodes, W, H){
   const med  = nodes.filter(n => n.role === "medium-site");
   const leak = nodes.filter(n => n.role === "clearnet-leak");
   const rest = nodes.filter(n => !["directory-hub","medium-site","clearnet-leak"].includes(n.role));
+  const smallRel = rest.filter(n => n.role === "small-or-isolate");
+  smallRel.forEach((h, i) => {
+    const a = (2 * Math.PI * i) / Math.max(smallRel.length, 1);
+    h.x = Math.cos(a) * 0.92;
+    h.y = Math.sin(a) * 0.92;
+  });
+
   hub.forEach(n => { n.x = cx; n.y = cy; n.r = radius(n.n_urls) + 6; });
   placeRing(med,  cx, cy, S*0.20, -0.3);
   placeRing(rest, cx, cy, S*0.32,  0.15);
@@ -233,7 +239,9 @@ fetch("demo_c.json").then(r=>r.json()).then(d=>{
   const rel = hosts.filter(h => !isIsolateHost(h));
   document.querySelector("#tL b").textContent = rel.length+" hosts · "+edges.length+" filaments";
   document.querySelector("#tR b").textContent = iso.length+" hosts · no inter-host edge";
-  paint(document.getElementById("c1"), rel, edges, false);
+  const relIds = new Set(rel.map(h => h.id));
+  const relEdges = edges.filter(e => relIds.has(e.source) && relIds.has(e.target));
+  paint(document.getElementById("c1"), rel, relEdges, false);
   paint(document.getElementById("c2"), iso, [], true);
 });
 </script>
